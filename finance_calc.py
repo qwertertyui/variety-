@@ -16,8 +16,7 @@ st.set_page_config(
 
 # ▼▼▼ Google Search Console 確認用タグ ▼▼▼
 GSC_TAG = """
-<meta name="google-site-verification" content="EpUeeUBBPuseZx2wNVbmmnkzGx9xFdRxJ0bP-9PRNjs" />
-"""
+<meta name="google-site-verification" content="KSAacQkcmWZkiLYnrnEx1MqjWZeub2m_XwehpZ4DgYU" />"""
 st.markdown(GSC_TAG, unsafe_allow_html=True)
 # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
