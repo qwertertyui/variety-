@@ -2,6 +2,11 @@ import streamlit as st
 import numpy as np
 from scipy.stats import norm
 
+# ==========================================
+# ファイル名: finance_calc.py
+# 実行コマンド: streamlit run finance_calc.py
+# ==========================================
+
 # --- 1. 設定 & 言語データ (Configuration & Localization) ---
 st.set_page_config(
     page_title="Quant Calculator Pro",
@@ -87,110 +92,4 @@ def black_scholes(S, K, T, r, sigma):
         return 0.0
     d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
-    call_price = S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
-    return call_price
-
-def kelly_criterion(win_rate, risk_reward):
-    # win_rate in decimal
-    # f = p - q / b  where p=win, q=loss, b=odds(risk_reward)
-    p = win_rate
-    q = 1 - p
-    b = risk_reward
-    if b == 0: return 0.0
-    f = (p * (b + 1) - 1) / b
-    return f * 100 # return as percentage
-
-def calculate_var(amount, volatility_annual, confidence, days):
-    # Convert annual vol to period vol
-    vol_period = (volatility_annual) * np.sqrt(days / 252)
-    z_score = norm.ppf(confidence)
-    var = amount * vol_period * z_score
-    return var
-
-# --- 3. UI構築 (User Interface) ---
-
-def main():
-    # サイドバーで言語選択
-    lang_opt = st.sidebar.radio("Language / 言語", ["日本語", "English"])
-    lang = "JP" if lang_opt == "日本語" else "EN"
-    txt = TRANS[lang]
-
-    st.title(txt["title"])
-
-    # サイドバーで機能選択
-    menu = [txt["calc_bs"], txt["calc_kelly"], txt["calc_var"]]
-    choice = st.sidebar.selectbox(txt["sidebar_title"], menu)
-
-    st.markdown("---")
-
-    # === VIEW: Black Scholes ===
-    if choice == txt["calc_bs"]:
-        st.subheader(txt["calc_bs"])
-        st.info(txt["desc_bs"])
-        
-        col1, col2 = st.columns(2)
-        s = col1.number_input(txt["bs_s"], value=100.0)
-        k = col2.number_input(txt["bs_k"], value=100.0)
-        t = col1.number_input(txt["bs_t"], value=1.0)
-        r = col2.number_input(txt["bs_r"], value=5.0)
-        v = col1.number_input(txt["bs_v"], value=20.0)
-
-        if st.button(txt["calc_btn"], key="btn_bs"):
-            price = black_scholes(s, k, t, r/100, v/100)
-            st.success(f"**{txt['bs_call']}: {price:.2f}**")
-            
-            # 簡易アフィリエイトエリア (例)
-            st.markdown("---")
-            if lang == "JP":
-                st.markdown("💡 **オプション取引を学ぶなら**: [おすすめの証券口座リンク(A8など)] | [専門書籍リンク]")
-            else:
-                st.markdown("💡 **Learn Options Trading**: [Affiliate Link]")
-
-    # === VIEW: Kelly Criterion ===
-    elif choice == txt["calc_kelly"]:
-        st.subheader(txt["calc_kelly"])
-        st.info(txt["desc_kelly"])
-
-        col1, col2 = st.columns(2)
-        p = col1.number_input(txt["kelly_p"], value=50.0, max_value=100.0)
-        rr = col2.number_input(txt["kelly_rr"], value=1.5)
-
-        if st.button(txt["calc_btn"], key="btn_kelly"):
-            f = kelly_criterion(p/100, rr)
-            
-            st.metric(label=txt["kelly_res"], value=f"{f:.2f} %")
-            
-            if f > 0:
-                st.write(f"Half Kelly: {f/2:.2f} %")
-            else:
-                st.error("Don't trade (Expected Value is negative).")
-            
-            st.caption(txt["kelly_note"])
-
-            # 簡易アフィリエイトエリア
-            st.markdown("---")
-            if lang == "JP":
-                st.markdown("📚 **資金管理の名著**: [投資苑(Amazonリンク)] | [マーケットの魔術師(Amazonリンク)]")
-
-    # === VIEW: VaR ===
-    elif choice == txt["calc_var"]:
-        st.subheader(txt["calc_var"])
-        st.info(txt["desc_var"])
-
-        amt = st.number_input(txt["var_amt"], value=1000000)
-        col1, col2 = st.columns(2)
-        vol = col1.number_input(txt["var_vol"], value=20.0)
-        conf = col2.selectbox(txt["var_conf"], [99.0, 95.0, 90.0])
-        days = st.slider(txt["var_day"], 1, 365, 10)
-
-        if st.button(txt["calc_btn"], key="btn_var"):
-            res = calculate_var(amt, vol/100, conf/100, days)
-            st.error(f"**{txt['var_res']}: -{res:,.0f}**")
-
-    st.markdown("<a href="https://px.a8.net/svt/ejp?a8mat=4AV8S7+B2WG36+ONS+TT69D" rel="nofollow">
-<img border="0" width="320" height="50" alt="" src="https://www22.a8.net/svt/bgt?aid=260118583670&wid=001&eno=01&mid=s00000003196005007000&mc=1"></a>
-<img border="0" width="1" height="1" src="https://www16.a8.net/0.gif?a8mat=4AV8S7+B2WG36+ONS+TT69D" alt="">")
-    st.caption(txt["disclaimer"])
-
-if __name__ == "__main__":
-    main()
+    call_price = S * norm.cdf(d1) -
