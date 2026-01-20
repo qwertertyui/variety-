@@ -28,6 +28,7 @@ TRANS = {
     "JP": {
         "title": "高度金融計算機 (Quant Calculator)",
         "sidebar_title": "計算モデル選択",
+        "calc_dcf": "理論株価 (DCF法)",  # New
         "calc_bs": "ブラック・ショールズ (オプション)",
         "calc_kelly": "ケリー基準 (資金管理)",
         "calc_var": "VaR (バリュー・アット・リスク)",
@@ -35,6 +36,7 @@ TRANS = {
         "calc_garch": "GARCHモデル (ボラティリティ予測)",
         "calc_hurst": "ハースト指数 (トレンド判定)",
         "calc_btn": "計算する",
+        "desc_dcf": "将来のフリーキャッシュフロー(FCF)を現在価値に割り引き、企業の本源的価値（理論株価）を算出します。", # New
         "desc_bs": "コールオプションの理論価格とグリークスを計算します。",
         "desc_kelly": "破産を避けつつ資産を最大化する最適な投資比率を計算します。",
         "desc_var": "特定の確率で発生しうる最大損失額を計算します。",
@@ -42,6 +44,7 @@ TRANS = {
         "desc_garch": "GARCH(1,1)モデルを用いて、翌日のボラティリティを予測します。",
         "desc_hurst": "時系列データからハースト指数を算出し、相場の性質（トレンド/平均回帰）を判定します。",
         # Inputs & Results
+        "dcf_fcf": "現在のFCF (百万)", "dcf_growth": "今後5年の成長率 (%)", "dcf_wacc": "割引率 (WACC) (%)", "dcf_term": "永久成長率 (%)", "dcf_shares": "発行済株式数 (百万株)", "dcf_cash": "現預金 (百万)", "dcf_debt": "有利子負債 (百万)", "dcf_res": "理論株価", # New
         "bs_s": "現在株価 (S)", "bs_k": "行使価格 (K)", "bs_t": "満期 (年)", "bs_r": "金利 (%)", "bs_v": "ボラティリティ (%)", "bs_call": "コール価格",
         "kelly_p": "勝率 (%)", "kelly_rr": "リスクリワード", "kelly_res": "推奨レバレッジ",
         "var_amt": "投資元本", "var_vol": "ボラティリティ (%)", "var_day": "期間 (日)", "var_res": "最大損失 (VaR)",
@@ -53,6 +56,7 @@ TRANS = {
     "EN": {
         "title": "Quant Calculator Pro",
         "sidebar_title": "Select Model",
+        "calc_dcf": "Intrinsic Value (DCF)", # New
         "calc_bs": "Black-Scholes (Option Pricing)",
         "calc_kelly": "Kelly Criterion (Money Mgmt)",
         "calc_var": "Value at Risk (VaR)",
@@ -60,6 +64,7 @@ TRANS = {
         "calc_garch": "GARCH Model (Volatility)",
         "calc_hurst": "Hurst Exponent (Trend)",
         "calc_btn": "Calculate",
+        "desc_dcf": "Calculate the intrinsic value of a stock using Discounted Cash Flow analysis.", # New
         "desc_bs": "Calculate theoretical call option price using Black-Scholes.",
         "desc_kelly": "Calculate optimal bet size to maximize wealth.",
         "desc_var": "Estimate maximum potential loss (VaR).",
@@ -67,6 +72,7 @@ TRANS = {
         "desc_garch": "Predict next-day volatility using GARCH(1,1).",
         "desc_hurst": "Estimate Hurst Exponent to determine trend.",
         # Inputs & Results
+        "dcf_fcf": "Current FCF (M)", "dcf_growth": "Growth Rate (5y) (%)", "dcf_wacc": "Discount Rate (WACC) (%)", "dcf_term": "Terminal Growth (%)", "dcf_shares": "Shares Outstanding (M)", "dcf_cash": "Cash & Equiv (M)", "dcf_debt": "Total Debt (M)", "dcf_res": "Intrinsic Value", # New
         "bs_s": "Spot Price (S)", "bs_k": "Strike Price (K)", "bs_t": "Maturity (Y)", "bs_r": "Rate (%)", "bs_v": "Volatility (%)", "bs_call": "Call Price",
         "kelly_p": "Win Rate (%)", "kelly_rr": "Risk/Reward", "kelly_res": "Optimal Leverage",
         "var_amt": "Portfolio Value", "var_vol": "Volatility (%)", "var_day": "Days", "var_res": "Max Loss (VaR)",
@@ -78,6 +84,31 @@ TRANS = {
 }
 
 # --- 2. 計算ロジック ---
+
+def calculate_dcf(fcf, growth_rate, wacc, terminal_rate, shares, cash, debt, years=5):
+    # 将来キャッシュフローの予測
+    future_fcf = []
+    for i in range(1, years + 1):
+        fcf = fcf * (1 + growth_rate)
+        future_fcf.append(fcf)
+    
+    # ターミナルバリュー (永続価値) の計算
+    terminal_value = (future_fcf[-1] * (1 + terminal_rate)) / (wacc - terminal_rate)
+    
+    # 現在価値への割引
+    dcf_value = 0
+    for i in range(years):
+        dcf_value += future_fcf[i] / ((1 + wacc) ** (i + 1))
+    
+    pv_terminal_value = terminal_value / ((1 + wacc) ** years)
+    
+    # 企業価値 -> 株主価値
+    enterprise_value = dcf_value + pv_terminal_value
+    equity_value = enterprise_value + cash - debt
+    
+    # 1株あたり理論株価
+    if shares == 0: return 0
+    return equity_value / shares
 
 def black_scholes(S, K, T, r, sigma):
     if T <= 0 or sigma <= 0: return 0.0
@@ -132,9 +163,9 @@ def main():
 
     st.title(txt["title"])
     
-    # メニュー選択
+    # メニュー選択 (DCFを追加)
     menu = [
-        txt["calc_bs"], txt["calc_kelly"], txt["calc_var"],
+        txt["calc_dcf"], txt["calc_bs"], txt["calc_kelly"], txt["calc_var"],
         txt["calc_port"], txt["calc_garch"], txt["calc_hurst"]
     ]
     choice = st.sidebar.selectbox(txt["sidebar_title"], menu)
@@ -146,8 +177,34 @@ def main():
 
     st.markdown("---")
 
-    # 1. Black-Scholes
-    if choice == txt["calc_bs"]:
+    # 1. DCF法 (理論株価) - NEW!
+    if choice == txt["calc_dcf"]:
+        st.subheader(txt["calc_dcf"])
+        st.info(txt["desc_dcf"])
+        
+        c1, c2 = st.columns(2)
+        fcf = c1.number_input(txt["dcf_fcf"], value=1000.0)
+        shares = c2.number_input(txt["dcf_shares"], value=100.0)
+        
+        c3, c4 = st.columns(2)
+        growth = c3.number_input(txt["dcf_growth"], value=5.0)
+        wacc = c4.number_input(txt["dcf_wacc"], value=8.0)
+        
+        c5, c6 = st.columns(2)
+        cash = c5.number_input(txt["dcf_cash"], value=2000.0)
+        debt = c6.number_input(txt["dcf_debt"], value=500.0)
+        
+        term = st.slider(txt["dcf_term"], 0.0, 5.0, 1.0, 0.1)
+
+        if st.button(txt["calc_btn"]):
+            if wacc <= term:
+                st.error("Error: WACC must be higher than Terminal Growth Rate.")
+            else:
+                res = calculate_dcf(fcf, growth/100, wacc/100, term/100, shares, cash, debt)
+                st.success(f"**{txt['dcf_res']}: {res:,.2f}**")
+
+    # 2. Black-Scholes
+    elif choice == txt["calc_bs"]:
         st.subheader(txt["calc_bs"])
         st.info(txt["desc_bs"])
         c1, c2 = st.columns(2)
@@ -160,7 +217,7 @@ def main():
             res = black_scholes(s, k, t, r/100, v/100)
             st.success(f"**{txt['bs_call']}: {res:.2f}**")
 
-    # 2. Kelly Criterion
+    # 3. Kelly Criterion
     elif choice == txt["calc_kelly"]:
         st.subheader(txt["calc_kelly"])
         st.info(txt["desc_kelly"])
@@ -173,7 +230,7 @@ def main():
             if res > 0: st.write(f"Half Kelly: {res/2:.2f}%")
             else: st.error("Do not trade.")
 
-    # 3. VaR
+    # 4. VaR
     elif choice == txt["calc_var"]:
         st.subheader(txt["calc_var"])
         st.info(txt["desc_var"])
@@ -186,7 +243,7 @@ def main():
             res = calculate_var(amt, vol/100, conf, days)
             st.error(f"**{txt['var_res']}: -{res:,.0f}**")
 
-    # 4. Portfolio Variance
+    # 5. Portfolio Variance
     elif choice == txt["calc_port"]:
         st.subheader(txt["calc_port"])
         st.info(txt["desc_port"])
@@ -203,12 +260,11 @@ def main():
                     st.success(f"**{txt['port_res_vol']}: {vol_p*100:.2f}%**")
             except: st.error("Input Error.")
 
-    # 5. GARCH (ここにエラー修正を適用済み)
+    # 6. GARCH
     elif choice == txt["calc_garch"]:
         st.subheader(txt["calc_garch"])
         st.info(txt["desc_garch"])
         c1, c2, c3 = st.columns(3)
-        # ▼▼▼ 修正箇所: 行末に `)` を追加しました ▼▼▼
         omega = c1.number_input(txt["garch_omega"], value=0.000002, format="%.6f")
         alpha = c2.number_input(txt["garch_alpha"], value=0.10)
         beta = c3.number_input(txt["garch_beta"], value=0.85)
@@ -219,7 +275,7 @@ def main():
             res_vol = garch_forecast(omega, alpha, beta, p_ret, p_vol)
             st.metric(txt["garch_res"], f"{res_vol:.2f}%")
 
-    # 6. Hurst
+    # 7. Hurst
     elif choice == txt["calc_hurst"]:
         st.subheader(txt["calc_hurst"])
         st.info(txt["desc_hurst"])
@@ -249,6 +305,5 @@ def main():
     
     st.caption(txt["disclaimer"])
 
-# ▼▼▼ 真っ白画面の原因対策: これが一番最後に必要です ▼▼▼
 if __name__ == "__main__":
     main()
