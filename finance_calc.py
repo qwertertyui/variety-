@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-from scipy.stats import norm, linregress
+from scipy.stats import norm
 
 # ==========================================
 # ファイル名: finance_calc.py
@@ -13,12 +13,6 @@ st.set_page_config(
     page_icon="📈",
     layout="centered"
 )
-
-# ▼▼▼ Google Search Console 確認用タグ ▼▼▼
-GSC_TAG = """
-<meta name="google-site-verification" content="KSAacQkcmWZkiLYnrnEx1MqjWZeub2m_XwehpZ4DgYU" />"""
-st.markdown(GSC_TAG, unsafe_allow_html=True)
-# ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 # A8.netの広告コード
 A8_AD_HTML = """
@@ -126,8 +120,6 @@ def calculate_hurst(ts):
         pp = np.subtract(ts[lag:], ts[:-lag])
         tau.append(np.sqrt(np.std(pp)))
         lagvec.append(lag)
-    # 修正: numpy.polyfit を使用するためにインポートが必要でしたが、冒頭で scipy.stats.linregress も入れています
-    # ここではシンプルに polyfit で計算します
     m = np.polyfit(np.log(lagvec), np.log(tau), 1)
     return m[0] * 2
 
@@ -216,45 +208,4 @@ def main():
         st.subheader(txt["calc_garch"])
         st.info(txt["desc_garch"])
         c1, c2, c3 = st.columns(3)
-        omega = c1.number_input(txt["garch_omega"], value=0.000002, format="%.6f")
-        alpha = c2.number_input(txt["garch_alpha"], value=0.10)
-        beta = c3.number_input(txt["garch_beta"], value=0.85)
-        c4, c5 = st.columns(2)
-        p_ret = c4.number_input(txt["garch_prev_ret"], value=1.5)
-        p_vol = c5.number_input(txt["garch_prev_vol"], value=15.0)
-        if st.button(txt["calc_btn"]):
-            res_vol = garch_forecast(omega, alpha, beta, p_ret, p_vol)
-            st.metric(txt["garch_res"], f"{res_vol:.2f}%")
-
-    # 6. Hurst
-    elif choice == txt["calc_hurst"]:
-        st.subheader(txt["calc_hurst"])
-        st.info(txt["desc_hurst"])
-        if st.button(txt["hurst_gen_btn"]):
-            rw = np.cumsum(np.random.randn(200)) + 100
-            st.session_state["hurst_data"] = ",".join([f"{x:.2f}" for x in rw])
-        default_data = st.session_state.get("hurst_data", "100, 101, 102, 101, 100")
-        data_input = st.text_area(txt["hurst_data"], default_data)
-        if st.button(txt["calc_btn"]):
-            try:
-                ts = [float(x) for x in data_input.split(",")]
-                h = calculate_hurst(ts)
-                st.metric(txt["hurst_res"], f"{h:.4f}")
-                if 0.45 <= h <= 0.55: interp = "Random Walk"
-                elif h > 0.55: interp = "Trending"
-                else: interp = "Mean Reverting"
-                st.info(f"{txt['hurst_interp']}: {interp}")
-                st.line_chart(ts)
-            except: st.error("Input Error.")
-
-    st.markdown("---")
-    
-    # === A8.net 広告表示 (ページ下部) ===
-    st.markdown("#### Sponsored Link")
-    st.markdown(A8_AD_HTML, unsafe_allow_html=True)
-    # =================================================
-    
-    st.caption(txt["disclaimer"])
-
-if __name__ == "__main__":
-    main()
+        omega = c1.number_input(txt["garch_omega"], value=0.000002, format
