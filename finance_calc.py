@@ -208,4 +208,4 @@ def main():
         st.subheader(txt["calc_garch"])
         st.info(txt["desc_garch"])
         c1, c2, c3 = st.columns(3)
-        omega = c1.number_input(txt["garch_omega"], value=0.000002, format
+        omega = c1.number_input(txt["garch_omega"], value=0.000002, format="%.6f")
