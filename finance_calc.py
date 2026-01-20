@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm, linregress
 
 # ==========================================
 # ファイル名: finance_calc.py
@@ -19,179 +19,291 @@ TRANS = {
     "JP": {
         "title": "高度金融計算機 (Quant Calculator)",
         "sidebar_title": "計算モデル選択",
-        "lang_select": "言語 / Language",
         "calc_bs": "ブラック・ショールズ (オプション)",
         "calc_kelly": "ケリー基準 (資金管理)",
         "calc_var": "VaR (バリュー・アット・リスク)",
+        "calc_port": "ポートフォリオ分散 (行列計算)",
+        "calc_garch": "GARCHモデル (ボラティリティ予測)",
+        "calc_hurst": "ハースト指数 (トレンド判定)",
         "calc_btn": "計算する",
-        "result": "計算結果",
         "desc_bs": "コールオプションの理論価格とグリークスを計算します。",
         "desc_kelly": "破産を避けつつ資産を最大化する最適な投資比率を計算します。",
         "desc_var": "特定の確率で発生しうる最大損失額を計算します。",
+        "desc_port": "相関係数を考慮したポートフォリオ全体のリスク（分散・標準偏差）を行列演算で算出します。",
+        "desc_garch": "GARCH(1,1)モデルを用いて、翌日のボラティリティを予測します。",
+        "desc_hurst": "時系列データからハースト指数を算出し、相場の性質（トレンド/平均回帰）を判定します。",
         # Black-Scholes Inputs
         "bs_s": "現在株価 (S)",
         "bs_k": "行使価格 (K)",
         "bs_t": "満期までの期間 (年)",
         "bs_r": "無リスク金利 (%)",
         "bs_v": "ボラティリティ (%)",
-        "bs_call": "コール価格",
+        "bs_call": "コール価格 (理論値)",
         # Kelly Inputs
         "kelly_p": "勝率 (%)",
         "kelly_rr": "リスクリワードレシオ (利益/損失)",
         "kelly_res": "推奨レバレッジ (資金の%)",
-        "kelly_note": "※実務では計算結果の半分(ハーフケリー)を使うことが一般的です。",
         # VaR Inputs
         "var_amt": "投資元本",
         "var_vol": "年率ボラティリティ (%)",
         "var_conf": "信頼区間 (%)",
         "var_day": "保有期間 (日)",
-        "var_res": "推定最大損失額",
-        # Disclaimer
+        "var_res": "推定最大損失額 (VaR)",
+        # Portfolio Inputs
+        "port_w": "投資比率 (カンマ区切り, 例: 0.5, 0.3, 0.2)",
+        "port_v": "各資産のボラティリティ (%, カンマ区切り)",
+        "port_corr": "相関係数 (一律)",
+        "port_res_var": "ポートフォリオ分散",
+        "port_res_vol": "ポートフォリオ標準偏差 (リスク)",
+        # GARCH Inputs
+        "garch_omega": "オメガ (ω: 定数項)",
+        "garch_alpha": "アルファ (α: 直近ショックの重み)",
+        "garch_beta": "ベータ (β: 過去ボラティリティの重み)",
+        "garch_prev_ret": "前日のリターン (%)",
+        "garch_prev_vol": "前日のボラティリティ (%)",
+        "garch_res": "翌日の予測ボラティリティ",
+        # Hurst Inputs
+        "hurst_data": "時系列データ (カンマ区切り)",
+        "hurst_gen_btn": "サンプルデータを生成 (ランダムウォーク)",
+        "hurst_res": "ハースト指数 (H)",
+        "hurst_interp": "判定",
         "disclaimer": "免責事項: 本ツールの計算結果は参考値であり、投資勧誘や利益を保証するものではありません。投資は自己責任で行ってください。"
     },
     "EN": {
         "title": "Quant Calculator Pro",
         "sidebar_title": "Select Model",
-        "lang_select": "Language",
         "calc_bs": "Black-Scholes (Option Pricing)",
         "calc_kelly": "Kelly Criterion (Money Mgmt)",
         "calc_var": "Value at Risk (VaR)",
+        "calc_port": "Portfolio Variance (Matrix)",
+        "calc_garch": "GARCH Model (Volatility)",
+        "calc_hurst": "Hurst Exponent (Trend)",
         "calc_btn": "Calculate",
-        "result": "Result",
-        "desc_bs": "Calculate theoretical call option price and Greeks.",
-        "desc_kelly": "Calculate optimal bet size to maximize wealth while avoiding ruin.",
-        "desc_var": "Estimate the maximum potential loss with a given confidence level.",
-        # Black-Scholes Inputs
+        "desc_bs": "Calculate theoretical call option price using Black-Scholes.",
+        "desc_kelly": "Calculate optimal bet size to maximize wealth.",
+        "desc_var": "Estimate maximum potential loss (VaR).",
+        "desc_port": "Calculate portfolio risk using matrix algebra (Weights^T * Cov * Weights).",
+        "desc_garch": "Predict next-day volatility using GARCH(1,1).",
+        "desc_hurst": "Estimate Hurst Exponent to determine trend vs mean-reversion.",
+        # Inputs
         "bs_s": "Spot Price (S)",
         "bs_k": "Strike Price (K)",
         "bs_t": "Time to Maturity (Years)",
         "bs_r": "Risk-Free Rate (%)",
         "bs_v": "Volatility (%)",
         "bs_call": "Call Price",
-        # Kelly Inputs
         "kelly_p": "Win Rate (%)",
         "kelly_rr": "Risk/Reward Ratio",
-        "kelly_res": "Optimal Leverage (% of Equity)",
-        "kelly_note": "*It is common practice to use half of this value (Half-Kelly).",
-        # VaR Inputs
+        "kelly_res": "Optimal Leverage",
         "var_amt": "Portfolio Value",
         "var_vol": "Annual Volatility (%)",
         "var_conf": "Confidence Level (%)",
         "var_day": "Holding Period (Days)",
         "var_res": "Estimated Max Loss (VaR)",
-        # Disclaimer
-        "disclaimer": "Disclaimer: Results are for informational purposes only. Trading involves risk."
+        "port_w": "Weights (comma separated, e.g. 0.5, 0.3, 0.2)",
+        "port_v": "Asset Volatilities (%, comma separated)",
+        "port_corr": "Correlation Coeff (Uniform)",
+        "port_res_var": "Portfolio Variance",
+        "port_res_vol": "Portfolio Std Dev (Risk)",
+        "garch_omega": "Omega (ω)",
+        "garch_alpha": "Alpha (α)",
+        "garch_beta": "Beta (β)",
+        "garch_prev_ret": "Prev Day Return (%)",
+        "garch_prev_vol": "Prev Day Volatility (%)",
+        "garch_res": "Forecasted Volatility",
+        "hurst_data": "Time Series Data (comma separated)",
+        "hurst_gen_btn": "Generate Random Walk Data",
+        "hurst_res": "Hurst Exponent (H)",
+        "hurst_interp": "Interpretation",
+        "disclaimer": "Disclaimer: Results are for informational purposes only."
     }
 }
 
 # --- 2. 計算ロジック (Calculation Logic) ---
 
 def black_scholes(S, K, T, r, sigma):
-    # r and sigma should be in decimal (e.g., 0.05 for 5%)
-    if T <= 0 or sigma <= 0:
-        return 0.0
+    if T <= 0 or sigma <= 0: return 0.0
     d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
-    # 修正箇所: 計算式だけを残してきれいにしました
-    call_price = S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
-    return call_price
+    return S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
 
 def kelly_criterion(win_rate, risk_reward):
-    # win_rate in decimal
-    # f = p - q / b  where p=win, q=loss, b=odds(risk_reward)
-    p = win_rate
-    q = 1 - p
-    b = risk_reward
-    if b == 0: return 0.0
-    f = (p * (b + 1) - 1) / b
-    return f * 100 # return as percentage
+    if risk_reward == 0: return 0.0
+    return ((win_rate * (risk_reward + 1) - 1) / risk_reward) * 100
 
 def calculate_var(amount, volatility_annual, confidence, days):
-    # Convert annual vol to period vol
     vol_period = (volatility_annual) * np.sqrt(days / 252)
-    z_score = norm.ppf(confidence)
-    var = amount * vol_period * z_score
-    return var
+    return amount * vol_period * norm.ppf(confidence)
+
+def portfolio_risk_matrix(weights, vols, corr):
+    # 行列計算: w^T * Sigma * w
+    w = np.array(weights)
+    v = np.array(vols)
+    n = len(w)
+    # 相関行列を作成 (対角成分1, その他corr)
+    corr_matrix = np.full((n, n), corr)
+    np.fill_diagonal(corr_matrix, 1.0)
+    # 分散共分散行列 Sigma = diag(v) * R * diag(v)
+    D = np.diag(v)
+    sigma_matrix = D @ corr_matrix @ D
+    # 分散計算
+    port_var = w.T @ sigma_matrix @ w
+    return port_var, np.sqrt(port_var)
+
+def garch_forecast(omega, alpha, beta, prev_ret, prev_vol):
+    # sigma_t^2 = omega + alpha * epsilon_{t-1}^2 + beta * sigma_{t-1}^2
+    # 入力は%なので小数に変換して計算
+    p_ret = prev_ret / 100
+    p_vol = prev_vol / 100
+    next_var = omega + alpha * (p_ret ** 2) + beta * (p_vol ** 2)
+    return np.sqrt(next_var) * 100
+
+def calculate_hurst(ts):
+    # 簡易的なR/S解析によるハースト指数推定
+    ts = np.array(ts)
+    if len(ts) < 10: return 0.5 # データ不足
+    lags = range(2, min(len(ts)//2, 20))
+    tau = []
+    lagvec = []
+    for lag in lags:
+        # 差分をとる
+        pp = np.subtract(ts[lag:], ts[:-lag])
+        tau.append(np.sqrt(np.std(pp)))
+        lagvec.append(lag)
+    # log-logプロットの傾き
+    m = np.polyfit(np.log(lagvec), np.log(tau), 1)
+    return m[0] * 2 # 簡易近似として一般化
 
 # --- 3. UI構築 (User Interface) ---
 
 def main():
-    # サイドバーで言語選択
     lang_opt = st.sidebar.radio("Language / 言語", ["日本語", "English"])
     lang = "JP" if lang_opt == "日本語" else "EN"
     txt = TRANS[lang]
 
     st.title(txt["title"])
-
-    # サイドバーで機能選択
-    menu = [txt["calc_bs"], txt["calc_kelly"], txt["calc_var"]]
+    
+    # メニュー選択
+    menu = [
+        txt["calc_bs"], 
+        txt["calc_kelly"], 
+        txt["calc_var"],
+        txt["calc_port"],
+        txt["calc_garch"],
+        txt["calc_hurst"]
+    ]
     choice = st.sidebar.selectbox(txt["sidebar_title"], menu)
-
     st.markdown("---")
 
-    # === VIEW: Black Scholes ===
+    # 1. Black-Scholes
     if choice == txt["calc_bs"]:
         st.subheader(txt["calc_bs"])
         st.info(txt["desc_bs"])
-        
-        col1, col2 = st.columns(2)
-        s = col1.number_input(txt["bs_s"], value=100.0)
-        k = col2.number_input(txt["bs_k"], value=100.0)
-        t = col1.number_input(txt["bs_t"], value=1.0)
-        r = col2.number_input(txt["bs_r"], value=5.0)
-        v = col1.number_input(txt["bs_v"], value=20.0)
+        c1, c2 = st.columns(2)
+        s = c1.number_input(txt["bs_s"], value=100.0)
+        k = c2.number_input(txt["bs_k"], value=100.0)
+        t = c1.number_input(txt["bs_t"], value=1.0)
+        r = c2.number_input(txt["bs_r"], value=5.0)
+        v = c1.number_input(txt["bs_v"], value=20.0)
+        if st.button(txt["calc_btn"]):
+            res = black_scholes(s, k, t, r/100, v/100)
+            st.success(f"**{txt['bs_call']}: {res:.2f}**")
 
-        if st.button(txt["calc_btn"], key="btn_bs"):
-            price = black_scholes(s, k, t, r/100, v/100)
-            st.success(f"**{txt['bs_call']}: {price:.2f}**")
-            
-            # 簡易アフィリエイトエリア
-            st.markdown("---")
-            if lang == "JP":
-                st.markdown("💡 **オプション取引を学ぶなら**: [口座開設リンク] | [専門書籍リンク]")
-            else:
-                st.markdown("💡 **Learn Options Trading**: [Affiliate Link]")
-
-    # === VIEW: Kelly Criterion ===
+    # 2. Kelly Criterion
     elif choice == txt["calc_kelly"]:
         st.subheader(txt["calc_kelly"])
         st.info(txt["desc_kelly"])
+        c1, c2 = st.columns(2)
+        p = c1.number_input(txt["kelly_p"], value=50.0, max_value=100.0)
+        rr = c2.number_input(txt["kelly_rr"], value=1.5)
+        if st.button(txt["calc_btn"]):
+            res = kelly_criterion(p/100, rr)
+            st.metric(txt["kelly_res"], f"{res:.2f}%")
+            if res > 0: st.write(f"Half Kelly: {res/2:.2f}%")
+            else: st.error("Do not trade.")
 
-        col1, col2 = st.columns(2)
-        p = col1.number_input(txt["kelly_p"], value=50.0, max_value=100.0)
-        rr = col2.number_input(txt["kelly_rr"], value=1.5)
-
-        if st.button(txt["calc_btn"], key="btn_kelly"):
-            f = kelly_criterion(p/100, rr)
-            
-            st.metric(label=txt["kelly_res"], value=f"{f:.2f} %")
-            
-            if f > 0:
-                st.write(f"Half Kelly: {f/2:.2f} %")
-            else:
-                st.error("Don't trade (Expected Value is negative).")
-            
-            st.caption(txt["kelly_note"])
-
-            # 簡易アフィリエイトエリア
-            st.markdown("---")
-            if lang == "JP":
-                st.markdown("📚 **資金管理の名著**: [投資苑(Amazonリンク)]")
-
-    # === VIEW: VaR ===
+    # 3. VaR
     elif choice == txt["calc_var"]:
         st.subheader(txt["calc_var"])
         st.info(txt["desc_var"])
-
         amt = st.number_input(txt["var_amt"], value=1000000)
-        col1, col2 = st.columns(2)
-        vol = col1.number_input(txt["var_vol"], value=20.0)
-        conf = col2.selectbox(txt["var_conf"], [99.0, 95.0, 90.0])
-        days = st.slider(txt["var_day"], 1, 365, 10)
-
-        if st.button(txt["calc_btn"], key="btn_var"):
-            res = calculate_var(amt, vol/100, conf/100, days)
+        c1, c2 = st.columns(2)
+        vol = c1.number_input(txt["var_vol"], value=20.0)
+        conf = c2.selectbox("Confidence", [0.99, 0.95, 0.90])
+        days = st.slider(txt["var_day"], 1, 100, 10)
+        if st.button(txt["calc_btn"]):
+            res = calculate_var(amt, vol/100, conf, days)
             st.error(f"**{txt['var_res']}: -{res:,.0f}**")
+
+    # 4. Portfolio Variance (Matrix)
+    elif choice == txt["calc_port"]:
+        st.subheader(txt["calc_port"])
+        st.info(txt["desc_port"])
+        # 入力: 重みとボラティリティ
+        w_input = st.text_input(txt["port_w"], "0.5, 0.3, 0.2")
+        v_input = st.text_input(txt["port_v"], "20, 15, 30")
+        corr = st.slider(txt["port_corr"], -1.0, 1.0, 0.5)
+        
+        if st.button(txt["calc_btn"]):
+            try:
+                w_list = [float(x) for x in w_input.split(",")]
+                v_list = [float(x)/100 for x in v_input.split(",")] # %を小数に
+                if len(w_list) != len(v_list):
+                    st.error("Error: Weights and Volatilities must have same length.")
+                else:
+                    var_p, vol_p = portfolio_risk_matrix(w_list, v_list, corr)
+                    st.success(f"**{txt['port_res_vol']}: {vol_p*100:.2f}%**")
+                    st.caption(f"{txt['port_res_var']}: {var_p:.6f}")
+            except:
+                st.error("Input Error. Please enter comma separated numbers.")
+
+    # 5. GARCH Model
+    elif choice == txt["calc_garch"]:
+        st.subheader(txt["calc_garch"])
+        st.info(txt["desc_garch"])
+        c1, c2, c3 = st.columns(3)
+        omega = c1.number_input(txt["garch_omega"], value=0.000002, format="%.6f")
+        alpha = c2.number_input(txt["garch_alpha"], value=0.10)
+        beta = c3.number_input(txt["garch_beta"], value=0.85)
+        
+        c4, c5 = st.columns(2)
+        p_ret = c4.number_input(txt["garch_prev_ret"], value=1.5) # %
+        p_vol = c5.number_input(txt["garch_prev_vol"], value=15.0) # %
+        
+        if st.button(txt["calc_btn"]):
+            res_vol = garch_forecast(omega, alpha, beta, p_ret, p_vol)
+            st.metric(txt["garch_res"], f"{res_vol:.2f}%")
+            st.caption(f"Params: ω={omega}, α={alpha}, β={beta}")
+
+    # 6. Hurst Exponent
+    elif choice == txt["calc_hurst"]:
+        st.subheader(txt["calc_hurst"])
+        st.info(txt["desc_hurst"])
+        
+        if st.button(txt["hurst_gen_btn"]):
+            # ランダムウォーク生成
+            rw = np.cumsum(np.random.randn(200)) + 100
+            st.session_state["hurst_data"] = ",".join([f"{x:.2f}" for x in rw])
+        
+        default_data = st.session_state.get("hurst_data", "100, 101, 102, 101, 100, 99, 98, 99, 100")
+        data_input = st.text_area(txt["hurst_data"], default_data)
+        
+        if st.button(txt["calc_btn"]):
+            try:
+                ts = [float(x) for x in data_input.split(",")]
+                h = calculate_hurst(ts)
+                st.metric(txt["hurst_res"], f"{h:.4f}")
+                
+                # 判定ロジック
+                if 0.45 <= h <= 0.55: interp = "Random Walk (予測困難)"
+                elif 0.55 < h <= 1.0: interp = "Trending (順張り有効)"
+                elif 0.0 <= h < 0.45: interp = "Mean Reverting (逆張り有効)"
+                else: interp = "Analysis Failed"
+                
+                st.info(f"{txt['hurst_interp']}: {interp}")
+                st.line_chart(ts)
+            except:
+                st.error("Input Error.")
 
     st.markdown("---")
     st.caption(txt["disclaimer"])
