@@ -92,4 +92,4 @@ def black_scholes(S, K, T, r, sigma):
         return 0.0
     d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
-    call_price = S * norm.cdf(d1) -
+    call_price = S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
