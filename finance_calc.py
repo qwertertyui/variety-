@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm, linregress
 
 # ==========================================
 # ファイル名: finance_calc.py
@@ -14,7 +14,14 @@ st.set_page_config(
     layout="centered"
 )
 
-# A8.netの広告コード（ここに入力されたコードが入っています）
+# ▼▼▼ Google Search Console 確認用タグ ▼▼▼
+GSC_TAG = """
+<meta name="google-site-verification" content="EpUeeUBBPuseZx2wNVbmmnkzGx9xFdRxJ0bP-9PRNjs" />
+"""
+st.markdown(GSC_TAG, unsafe_allow_html=True)
+# ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+# A8.netの広告コード
 A8_AD_HTML = """
 <div style="text-align: center; margin-top: 20px;">
 <a href="https://px.a8.net/svt/ejp?a8mat=4AV8S7+B2WG36+ONS+TT69D" rel="nofollow">
@@ -46,7 +53,7 @@ TRANS = {
         "kelly_p": "勝率 (%)", "kelly_rr": "リスクリワード", "kelly_res": "推奨レバレッジ",
         "var_amt": "投資元本", "var_vol": "ボラティリティ (%)", "var_day": "期間 (日)", "var_res": "最大損失 (VaR)",
         "port_w": "投資比率 (カンマ区切り)", "port_v": "ボラティリティ (%, カンマ区切り)", "port_corr": "相関係数", "port_res_vol": "ポートフォリオ標準偏差",
-        "garch_omega": "オメガ (ω)", "garch_alpha": "アルファ (α)", "garch_beta": "ベータ (β)", "garch_res": "予測ボラティリティ",
+        "garch_omega": "オメガ (ω)", "garch_alpha": "アルファ (α)", "garch_beta": "ベータ (β)", "garch_prev_ret": "前日のリターン (%)", "garch_prev_vol": "前日のボラティリティ (%)", "garch_res": "予測ボラティリティ",
         "hurst_data": "時系列データ", "hurst_gen_btn": "データ生成", "hurst_res": "ハースト指数", "hurst_interp": "判定",
         "disclaimer": "免責事項: 投資は自己責任で行ってください。"
     },
@@ -71,7 +78,7 @@ TRANS = {
         "kelly_p": "Win Rate (%)", "kelly_rr": "Risk/Reward", "kelly_res": "Optimal Leverage",
         "var_amt": "Portfolio Value", "var_vol": "Volatility (%)", "var_day": "Days", "var_res": "Max Loss (VaR)",
         "port_w": "Weights (comma separated)", "port_v": "Vols (%, comma separated)", "port_corr": "Correlation", "port_res_vol": "Portfolio Risk",
-        "garch_omega": "Omega (ω)", "garch_alpha": "Alpha (α)", "garch_beta": "Beta (β)", "garch_res": "Forecasted Vol",
+        "garch_omega": "Omega (ω)", "garch_alpha": "Alpha (α)", "garch_beta": "Beta (β)", "garch_prev_ret": "Prev Day Return (%)", "garch_prev_vol": "Prev Day Volatility (%)", "garch_res": "Forecasted Vol",
         "hurst_data": "Time Series Data", "hurst_gen_btn": "Generate Data", "hurst_res": "Hurst Exponent", "hurst_interp": "Interpretation",
         "disclaimer": "Disclaimer: Trading involves risk."
     }
@@ -120,6 +127,8 @@ def calculate_hurst(ts):
         pp = np.subtract(ts[lag:], ts[:-lag])
         tau.append(np.sqrt(np.std(pp)))
         lagvec.append(lag)
+    # 修正: numpy.polyfit を使用するためにインポートが必要でしたが、冒頭で scipy.stats.linregress も入れています
+    # ここではシンプルに polyfit で計算します
     m = np.polyfit(np.log(lagvec), np.log(tau), 1)
     return m[0] * 2
 
@@ -212,8 +221,8 @@ def main():
         alpha = c2.number_input(txt["garch_alpha"], value=0.10)
         beta = c3.number_input(txt["garch_beta"], value=0.85)
         c4, c5 = st.columns(2)
-        p_ret = c4.number_input("Prev Ret (%)", value=1.5)
-        p_vol = c5.number_input("Prev Vol (%)", value=15.0)
+        p_ret = c4.number_input(txt["garch_prev_ret"], value=1.5)
+        p_vol = c5.number_input(txt["garch_prev_vol"], value=15.0)
         if st.button(txt["calc_btn"]):
             res_vol = garch_forecast(omega, alpha, beta, p_ret, p_vol)
             st.metric(txt["garch_res"], f"{res_vol:.2f}%")
@@ -241,7 +250,7 @@ def main():
 
     st.markdown("---")
     
-    # === A8.net 広告表示 (ページ下部にも表示したい場合) ===
+    # === A8.net 広告表示 (ページ下部) ===
     st.markdown("#### Sponsored Link")
     st.markdown(A8_AD_HTML, unsafe_allow_html=True)
     # =================================================
